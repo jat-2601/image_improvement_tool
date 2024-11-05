@@ -8,7 +8,7 @@ import os
 # Function to load the ESRGAN model from a .h5 file
 def load_esrgan_model(model_path):
     try:
-        model = tf.keras.models.load_model(model_path)  # Corrected this line
+        model = tf.keras.models.load_model(model_path)  # Load the model from the specified path
         return model
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -28,7 +28,7 @@ st.title("Image Enhancement Dashboard with ESRGAN")
 st.write("Upload low-resolution images to enhance their quality!")
 
 # Specify the path to your model file
-model_path = "model.h5"  # Update this path to your model's location
+model_path = "model.h5"  # Directly using the model.h5 path
 model = load_esrgan_model(model_path)
 
 # File uploader for multiple images
