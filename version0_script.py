@@ -1,45 +1,27 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
+import tensorflow as tf
+import tensorflow_hub as hub
 import zipfile
 import os
+import time
 
-# Define a simple ESRGAN model (for demonstration purposes)
-class ESRGAN(nn.Module):
-    def __init__(self):
-        super(ESRGAN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.conv3 = nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1)
-
-    def forward(self, x):
-        x = torch.relu(self.conv1(x))
-        x = torch.relu(self.conv2(x))
-        x = torch.sigmoid(self.conv3(x))
-        return x
-
-# Load the pretrained ESRGAN model (dummy model for demonstration)
+# Load the pretrained ESRGAN model from TensorFlow Hub
 @st.cache_resource
 def load_esrgan_model():
-    model = ESRGAN()
-    # Normally you would load the pretrained weights here
-    # model.load_state_dict(torch.load("path_to_pretrained_model.pth"))
+    model_url = "https://tfhub.dev/captain-pool/esrgan-tf2/1"  # ESRGAN model URL
+    model = hub.load(model_url)
     return model
 
 # Enhance image using ESRGAN
 def enhance_image_with_esrgan(image, model):
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-    ])
-    image_tensor = transform(image).unsqueeze(0)  # Add batch dimension
-    with torch.no_grad():
-        enhanced_image_tensor = model(image_tensor)
-    enhanced_image = transforms.ToPILImage()(enhanced_image_tensor.squeeze())
-    return enhanced_image
+    image = image.resize((image.width // 4, image.height // 4))  # Resize for ESRGAN input
+    image_array = np.array(image) / 255.0  # Normalize to [0, 1]
+    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+    enhanced_image = model(image_array)
+    enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
+    return Image.fromarray(enhanced_image)
 
 # Streamlit app layout
 st.title("Image Enhancement Dashboard with ESRGAN")
@@ -51,6 +33,18 @@ uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "
 
 # Load the ESRGAN model
 model = load_esrgan_model()
+
+# Verify model is running
+for i in range(100):
+    try:
+        # Test the model with a dummy input
+        dummy_input = np.random.rand(1, 256, 256, 3).astype(np.float32)  # Dummy input
+        model(dummy_input)  # Run the model
+        st.success(f"Model is running successfully! Check {i + 1}/100.")
+        time.sleep(0.1)  # Sleep to avoid overwhelming the output
+    except Exception as e:
+        st.error(f"Error during model verification: {e}")
+        break
 
 # Processing images
 if uploaded_files:
