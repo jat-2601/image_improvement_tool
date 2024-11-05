@@ -8,8 +8,12 @@ import os
 # Function to load the ESRGAN model from a .h5 file
 @st.cache_resource
 def load_esrgan_model(model_path):
-    model = tf.keras.models.load_model(model_path)
-    return model
+    try:
+        model = tf.keras.models.load_model(model_path)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
 # Enhance image using ESRGAN
 def enhance_image_with_esrgan(image, model):
@@ -36,10 +40,11 @@ if model_file is not None:
     model_path = os.path.join("temp_model.h5")
     with open(model_path, "wb") as f:
         f.write(model_file.getbuffer())
+    
     model = load_esrgan_model(model_path)
 
     # Processing images
-    if uploaded_files:
+    if model and uploaded_files:
         temp_dir = "temp_images"
         os.makedirs(temp_dir, exist_ok=True)
 
