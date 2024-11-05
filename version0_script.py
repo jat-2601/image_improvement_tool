@@ -28,7 +28,7 @@ st.title("Image Enhancement Dashboard with ESRGAN")
 st.write("Upload low-resolution images to enhance their quality!")
 
 # Specify the path to your model file
-model_path = "path/to/your/model.h5"  # Update this path to your model's location
+model_path = "model.h5"  # Update this path to your model's location
 model = load_esrgan_model(model_path)
 
 # File uploader for multiple images
