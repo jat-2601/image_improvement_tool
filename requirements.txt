@@ -1,5 +1,6 @@
 streamlit==1.21.0
-torch==2.0.0
-torchvision==0.15.0
+tensorflow==2.18.0
+tensorflow-hub==0.12.0
 Pillow==9.4.0
 numpy==1.26.0
+setuptools==75.3.0
