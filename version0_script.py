@@ -1,49 +1,11 @@
-from huggingface_hub import hf_hub_download
-
-def download_model():
-    model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
-    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
-    try:
-        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-        return model_path
-    except Exception as e:
-        st.error(f"Error downloading model: {e}")
-        return None
-from huggingface_hub import hf_hub_download
-
-def download_model():
-    model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
-    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
-    try:
-        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-        return model_path
-    except Exception as e:
-        st.error(f"Error downloading model: {e}")
-        return None
-from huggingface_hub import snapshot_download
-
-model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
-model_path = snapshot_download(repo_id=model_repo)
 import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
 import zipfile
 import os
-from huggingface_hub import hf_hub_download
 
-# Function to download the model from Hugging Face
-def download_model():
-    model_repo = "jayyap/swinir"  # Ensure this is the correct model repo
-    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
-    try:
-        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-        return model_path
-    except Exception as e:
-        st.error(f"Error downloading model: {e}")
-        return None
-
-# Load the SwinIR model
+# Function to load the SwinIR model from a .h5 file
 def load_swinir_model(model_path):
     try:
         model = tf.keras.models.load_model(model_path)
@@ -65,9 +27,16 @@ def enhance_image_with_swinir(image, model):
 st.title("Image Enhancement Dashboard with SwinIR")
 st.write("Upload low-resolution images to enhance their quality!")
 
-# Download and load the model
-model_path = download_model()
-model = load_swinir_model(model_path)
+# File uploader for the model
+model_file = st.file_uploader("Upload your SwinIR model (.h5)", type=["h5"])
+
+# Load the model if a file is uploaded
+model = None
+if model_file is not None:
+    model_path = "swinir_model.h5"
+    with open(model_path, "wb") as f:
+        f.write(model_file.getbuffer())
+    model = load_swinir_model(model_path)
 
 # File uploader for multiple images
 uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -116,4 +85,4 @@ if model and uploaded_files:
 
     st.success("Enhancement Complete!")
 else:
-    st.info("Please ensure the model is loaded correctly and upload images to get started.")
+    st.info("Please upload your SwinIR model and images to get started.")
