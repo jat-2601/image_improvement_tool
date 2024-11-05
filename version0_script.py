@@ -8,7 +8,7 @@ import os
 # Function to load the ESRGAN model from a .h5 file
 def load_esrgan_model(model_path):
     try:
-        model = tf.keras.models.load_model(model_path)
+        model = tf.keras.models.load_model(model.h5)
         return model
     except Exception as e:
         st.error(f"Error loading model: {e}")
