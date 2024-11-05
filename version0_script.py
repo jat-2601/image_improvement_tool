@@ -4,7 +4,6 @@ import numpy as np
 from PIL import Image, ImageEnhance, ExifTags
 from io import BytesIO
 
-
 # Load a pre-trained super-resolution model (example using OpenCV)
 @st.cache_resource
 def load_super_resolution_model():
@@ -13,7 +12,6 @@ def load_super_resolution_model():
     sr.readModel(model_path)
     sr.setModel("espcn", 4)  # Set the model and scale
     return sr
-
 
 # Enhance a single image with basic adjustments
 def enhance_image(image, brightness, contrast, sharpness, hist_eq=False):
@@ -27,9 +25,8 @@ def enhance_image(image, brightness, contrast, sharpness, hist_eq=False):
     image = ImageEnhance.Brightness(image).enhance(brightness)
     image = ImageEnhance.Contrast(image).enhance(contrast)
     image = ImageEnhance.Sharpness(image).enhance(sharpness)
-
+    
     return image
-
 
 # Apply filters
 def apply_filter(image, filter_type):
@@ -38,12 +35,11 @@ def apply_filter(image, filter_type):
     elif filter_type == "Sepia":
         sepia_image = np.array(image)
         sepia_filter = np.array([[0.393, 0.769, 0.189],
-                                 [0.349, 0.686, 0.168],
-                                 [0.272, 0.534, 0.131]])
+                                  [0.349, 0.686, 0.168],
+                                  [0.272, 0.534, 0.131]])
         sepia_image = cv2.transform(sepia_image, sepia_filter)
         return Image.fromarray(np.clip(sepia_image, 0, 255).astype(np.uint8))
     return image
-
 
 # Super-resolution enhancement
 def super_resolve(image, sr_model):
@@ -51,14 +47,12 @@ def super_resolve(image, sr_model):
     result = sr_model.upsample(image_np)
     return Image.fromarray(result)
 
-
 # Streamlit app layout
 st.title("Enhanced Image Pixel Enhancer Dashboard")
 st.write("Upload low-resolution images, apply enhancements, and adjust image properties!")
 
 # File uploader for multiple images
-uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"],
-                                  accept_multiple_files=True)
+uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
 # Enhancement sliders
 brightness = st.slider("Brightness", 0.5, 2.0, 1.0)
@@ -74,14 +68,13 @@ sr_model = load_super_resolution_model()
 if uploaded_files:
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
-
+        
         # Display metadata if available
         st.write(f"### {uploaded_file.name}")
-        metadata = {ExifTags.TAGS[k]: v for k, v in image._getexif().items() if
-                    k in ExifTags.TAGS} if image._getexif() else None
+        metadata = {ExifTags.TAGS[k]: v for k, v in image._getexif().items() if k in ExifTags.TAGS} if image._getexif() else None
         if metadata:
             st.write("Image Metadata:", metadata)
-
+        
         # Enhance the image with basic adjustments and filters
         enhanced_image_basic = enhance_image(image, brightness, contrast, sharpness, hist_eq)
         enhanced_image_basic = apply_filter(enhanced_image_basic, filter_type)
@@ -107,7 +100,7 @@ if uploaded_files:
         buf_sr = BytesIO()
         enhanced_image_sr.save(buf_sr, format="PNG")
         byte_im_sr = buf_sr.getvalue()
-
+        
         st.download_button(
             label=f"Download Enhanced Image (Basic Adjustments) - {uploaded_file.name}",
             data=byte_im_basic,
@@ -121,7 +114,7 @@ if uploaded_files:
             file_name=f"enhanced_sr_{uploaded_file.name.split('.')[0]}.png",
             mime="image/png"
         )
-
+        
     st.success("Enhancement Complete!")
 else:
     st.info("Please upload one or more images to get started.")
