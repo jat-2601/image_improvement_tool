@@ -8,7 +8,7 @@ import os
 # Function to load the ESRGAN model from a .h5 file
 def load_esrgan_model(model_path):
     try:
-        model = tf.keras.models.load_model(model.h5)
+        model = tf.keras.models.load_model(model_path)  # Corrected this line
         return model
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -36,7 +36,7 @@ uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "
                                    accept_multiple_files=True)
 
 # Processing images
-if model and uploaded_files:
+if model is not None and uploaded_files:  # Check if model is loaded successfully
     temp_dir = "temp_images"
     os.makedirs(temp_dir, exist_ok=True)
 
