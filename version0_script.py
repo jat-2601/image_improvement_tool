@@ -8,10 +8,14 @@ from huggingface_hub import hf_hub_download
 
 # Function to download the model from Hugging Face
 def download_model():
-    model_repo = "jayyap/upscale"  # Replace with the correct model repo if needed
-    model_filename = "swinir_model.h5"  # Adjust based on the actual model file name
-    model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-    return model_path
+    model_repo = "jayyap/upscale"  # Ensure this is the correct model repo
+    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
+    try:
+        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
+        return model_path
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        return None
 
 # Load the SwinIR model
 def load_swinir_model(model_path):
@@ -24,9 +28,9 @@ def load_swinir_model(model_path):
 
 # Enhance image using SwinIR
 def enhance_image_with_swinir(image, model):
-    image = image.resize((image.width // 4, image.height // 4))
-    image_array = np.array(image) / 255.0
-    image_array = np.expand_dims(image_array, axis=0)
+    image = image.resize((image.width // 4, image.height // 4))  # Resize for SwinIR input
+    image_array = np.array(image) / 255.0  # Normalize to [0, 1]
+    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
     enhanced_image = model.predict(image_array)
     enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(enhanced_image)
@@ -49,22 +53,28 @@ if model and uploaded_files:
 
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
+
+        # Enhance the image using SwinIR
         enhanced_image = enhance_image_with_swinir(image, model)
 
+        # Save enhanced images to the temporary directory
         enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
         enhanced_image.save(enhanced_image_path)
 
+        # Display original and enhanced images
         col1, col2 = st.columns(2)
         with col1:
             st.image(image.resize((500, 750)), caption="Original Image", use_column_width=True)
         with col2:
             st.image(enhanced_image.resize((500, 750)), caption="Enhanced Image", use_column_width=True)
 
+    # Create a ZIP file containing all enhanced images
     zip_filename = "enhanced_images.zip"
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for file in os.listdir(temp_dir):
             zipf.write(os.path.join(temp_dir, file), file)
 
+    # Download button for the ZIP file
     with open(zip_filename, 'rb') as f:
         st.download_button(
             label="Download All Enhanced Images as ZIP",
@@ -73,6 +83,7 @@ if model and uploaded_files:
             mime="application/zip"
         )
 
+    # Clean up the temporary directory
     for file in os.listdir(temp_dir):
         os.remove(os.path.join(temp_dir, file))
     os.rmdir(temp_dir)
