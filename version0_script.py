@@ -1,120 +1,87 @@
 import streamlit as st
-import cv2
 import numpy as np
-from PIL import Image, ImageEnhance, ExifTags
-from io import BytesIO
+from PIL import Image, ExifTags
+import zipfile
+import os
+import tensorflow as tf
+import tensorflow_hub as hub
 
-# Load a pre-trained super-resolution model (example using OpenCV)
+# Load the pretrained ESRGAN model from TensorFlow Hub
 @st.cache_resource
-def load_super_resolution_model():
-    sr = cv2.dnn_superres.DnnSuperResImpl_create()
-    model_path = "espcn_x4.pb"  # Path to your model file
-    sr.readModel(model_path)
-    sr.setModel("espcn", 4)  # Set the model and scale
-    return sr
+def load_esrgan_model():
+    model_url = "https://tfhub.dev/captain-pool/esrgan-tf2/1"  # ESRGAN model URL
+    model = hub.load(model_url)
+    return model
 
-# Enhance a single image with basic adjustments
-def enhance_image(image, brightness, contrast, sharpness, hist_eq=False):
-    if hist_eq:
-        lab = image.convert("LAB")
-        l, a, b = lab.split()
-        l = ImageEnhance.Contrast(l).enhance(2)
-        lab = Image.merge("LAB", (l, a, b))
-        image = lab.convert("RGB")
-
-    image = ImageEnhance.Brightness(image).enhance(brightness)
-    image = ImageEnhance.Contrast(image).enhance(contrast)
-    image = ImageEnhance.Sharpness(image).enhance(sharpness)
-    
-    return image
-
-# Apply filters
-def apply_filter(image, filter_type):
-    if filter_type == "Grayscale":
-        return image.convert("L")
-    elif filter_type == "Sepia":
-        sepia_image = np.array(image)
-        sepia_filter = np.array([[0.393, 0.769, 0.189],
-                                  [0.349, 0.686, 0.168],
-                                  [0.272, 0.534, 0.131]])
-        sepia_image = cv2.transform(sepia_image, sepia_filter)
-        return Image.fromarray(np.clip(sepia_image, 0, 255).astype(np.uint8))
-    return image
-
-# Super-resolution enhancement
-def super_resolve(image, sr_model):
-    image_np = np.array(image)
-    result = sr_model.upsample(image_np)
-    return Image.fromarray(result)
+# Enhance image using ESRGAN
+def enhance_image_with_esrgan(image, model):
+    image = image.resize((image.width // 4, image.height // 4))  # Resize for ESRGAN input
+    image_array = np.array(image) / 255.0  # Normalize to [0, 1]
+    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+    enhanced_image = model(image_array)
+    enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
+    return Image.fromarray(enhanced_image)
 
 # Streamlit app layout
-st.title("Enhanced Image Pixel Enhancer Dashboard")
-st.write("Upload low-resolution images, apply enhancements, and adjust image properties!")
+st.title("Image Enhancement Dashboard with ESRGAN")
+st.write("Upload low-resolution images to enhance their quality!")
 
 # File uploader for multiple images
-uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"],
+                                   accept_multiple_files=True)
 
-# Enhancement sliders
-brightness = st.slider("Brightness", 0.5, 2.0, 1.0)
-contrast = st.slider("Contrast", 0.5, 2.0, 1.0)
-sharpness = st.slider("Sharpness", 0.5, 2.0, 1.0)
-hist_eq = st.checkbox("Apply Histogram Equalization")
-filter_type = st.selectbox("Choose a Filter", ["None", "Grayscale", "Sepia"])
-
-# Load the super-resolution model
-sr_model = load_super_resolution_model()
+# Load the ESRGAN model
+model = load_esrgan_model()
 
 # Processing images
 if uploaded_files:
+    temp_dir = "temp_images"
+    os.makedirs(temp_dir, exist_ok=True)
+
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
-        
+
         # Display metadata if available
         st.write(f"### {uploaded_file.name}")
-        metadata = {ExifTags.TAGS[k]: v for k, v in image._getexif().items() if k in ExifTags.TAGS} if image._getexif() else None
+        metadata = {ExifTags.TAGS[k]: v for k, v in image._getexif().items() if
+                    k in ExifTags.TAGS} if image._getexif() else None
         if metadata:
             st.write("Image Metadata:", metadata)
-        
-        # Enhance the image with basic adjustments and filters
-        enhanced_image_basic = enhance_image(image, brightness, contrast, sharpness, hist_eq)
-        enhanced_image_basic = apply_filter(enhanced_image_basic, filter_type)
 
-        # Apply super-resolution
-        enhanced_image_sr = super_resolve(image, sr_model)
+        # Enhance the image using ESRGAN
+        enhanced_image = enhance_image_with_esrgan(image, model)
 
-        # Show original and enhanced images side by side
+        # Save enhanced images to the temporary directory
+        enhanced_image.save(os.path.join(temp_dir, f"enhanced_{uploaded_file.name.split('.')[0]}.png"))
+
+        # Show original and enhanced images
         col1, col2 = st.columns(2)
         with col1:
-            st.image(image, caption="Original Image", use_column_width=True)
+            st.image(image.resize((500, 750)), caption="Original Image", use_column_width=True)
         with col2:
-            st.image(enhanced_image_basic, caption="Enhanced Image (Basic Adjustments)", use_column_width=True)
+            st.image(enhanced_image.resize((500, 750)), caption="Enhanced Image", use_column_width=True)
 
-        # Show super-resolution enhanced image
-        st.image(enhanced_image_sr, caption="Enhanced Image (Super-Resolution)", use_column_width=True)
+    # Create a ZIP file containing all enhanced images
+    zip_filename = "enhanced_images.zip"
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
+        for root, _, files in os.walk(temp_dir):
+            for file in files:
+                zipf.write(os.path.join(root, file), file)
 
-        # Download enhanced images
-        buf_basic = BytesIO()
-        enhanced_image_basic.save(buf_basic, format="PNG")
-        byte_im_basic = buf_basic.getvalue()
-
-        buf_sr = BytesIO()
-        enhanced_image_sr.save(buf_sr, format="PNG")
-        byte_im_sr = buf_sr.getvalue()
-        
+    # Download button for the ZIP file
+    with open(zip_filename, 'rb') as f:
         st.download_button(
-            label=f"Download Enhanced Image (Basic Adjustments) - {uploaded_file.name}",
-            data=byte_im_basic,
-            file_name=f"enhanced_basic_{uploaded_file.name.split('.')[0]}.png",
-            mime="image/png"
+            label="Download All Enhanced Images as ZIP",
+            data=f,
+            file_name=zip_filename,
+            mime="application/zip"
         )
 
-        st.download_button(
-            label=f"Download Enhanced Image (Super-Resolution) - {uploaded_file.name}",
-            data=byte_im_sr,
-            file_name=f"enhanced_sr_{uploaded_file.name.split('.')[0]}.png",
-            mime="image/png"
-        )
-        
+    # Clean up the temporary directory
+    for file in os.listdir(temp_dir):
+        os.remove(os.path.join(temp_dir, file))
+    os.rmdir(temp_dir)
+
     st.success("Enhancement Complete!")
 else:
     st.info("Please upload one or more images to get started.")
