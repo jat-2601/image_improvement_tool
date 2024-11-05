@@ -13,7 +13,8 @@ usernames = ['user1']  # Add usernames
 passwords = ['password']  # Add passwords (in a real app, use hashed passwords)
 
 # Create an authenticator object
-authenticator = stauth.Authenticate(names, usernames, passwords, 'my_app', 'abcdef', cookie_expiry_days=30)
+hashed_passwords = stauth.Hasher(passwords).generate()  # Hash the passwords
+authenticator = stauth.Authenticate(names, usernames, hashed_passwords, 'my_app', 'abcdef', cookie_expiry_days=30)
 
 # Login
 name, authentication_status = authenticator.login('Login', 'main')
