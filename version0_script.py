@@ -17,7 +17,8 @@ def load_esrgan_model(model_path):
 
 # Enhance image using ESRGAN
 def enhance_image_with_esrgan(image, model):
-    image = image.resize((image.width // 4, image.height // 4))  # Resize for ESRGAN input
+    # Resize image for ESRGAN input
+    image = image.resize((image.width // 4, image.height // 4))
     image_array = np.array(image) / 255.0  # Normalize to [0, 1]
     image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
     enhanced_image = model.predict(image_array)
