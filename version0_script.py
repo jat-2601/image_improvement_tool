@@ -1,10 +1,10 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ExifTags
-import zipfile
-import os
+from PIL import Image
 import tensorflow as tf
 import tensorflow_hub as hub
+import zipfile
+import os
 
 # Load the pretrained ESRGAN model from TensorFlow Hub
 @st.cache_resource
@@ -40,13 +40,6 @@ if uploaded_files:
 
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
-
-        # Display metadata if available
-        st.write(f"### {uploaded_file.name}")
-        metadata = {ExifTags.TAGS[k]: v for k, v in image._getexif().items() if
-                    k in ExifTags.TAGS} if image._getexif() else None
-        if metadata:
-            st.write("Image Metadata:", metadata)
 
         # Enhance the image using ESRGAN
         enhanced_image = enhance_image_with_esrgan(image, model)
