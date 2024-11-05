@@ -1,3 +1,29 @@
+from huggingface_hub import hf_hub_download
+
+def download_model():
+    model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
+    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
+    try:
+        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
+        return model_path
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        return None
+from huggingface_hub import hf_hub_download
+
+def download_model():
+    model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
+    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
+    try:
+        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
+        return model_path
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        return None
+from huggingface_hub import snapshot_download
+
+model_repo = "jayyap/swinir"  # Update this to the correct repo if needed
+model_path = snapshot_download(repo_id=model_repo)
 import streamlit as st
 import numpy as np
 from PIL import Image
@@ -8,7 +34,7 @@ from huggingface_hub import hf_hub_download
 
 # Function to download the model from Hugging Face
 def download_model():
-    model_repo = "jayyap/upscale"  # Ensure this is the correct model repo
+    model_repo = "jayyap/swinir"  # Ensure this is the correct model repo
     model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
     try:
         model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
