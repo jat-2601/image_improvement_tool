@@ -2,13 +2,13 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import torch
-from transformers import SwinForImageClassification, AutoFeatureExtractor
+from transformers import Swin2SRForImageSuperResolution, AutoImageProcessor
 import zipfile
 import os
 from huggingface_hub import login
 
 # Streamlit app layout
-st.title("Image Enhancement Dashboard with SwinIR")
+st.title("Image Enhancement Dashboard with Swin2SR")
 st.write("Upload low-resolution images to enhance their quality!")
 
 # Input for Hugging Face token
@@ -22,22 +22,22 @@ if hf_token:
     except Exception as e:
         st.error(f"Error logging in: {e}")
 
-# Load the SwinIR model and feature extractor directly from Hugging Face
+# Load the Swin2SR model and feature extractor directly from Hugging Face
 def load_model():
     try:
-        model = SwinForImageClassification.from_pretrained("jayyap/swinir")
-        feature_extractor = AutoFeatureExtractor.from_pretrained("jayyap/swinir")
+        model = Swin2SRForImageSuperResolution.from_pretrained("jayyap/swin2sr")
+        feature_extractor = AutoImageProcessor.from_pretrained("jayyap/swin2sr")
         return model, feature_extractor
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, None
 
-# Enhance image using SwinIR
-def enhance_image_with_swinir(image, model, feature_extractor):
+# Enhance image using Swin2SR
+def enhance_image_with_swin2sr(image, model, feature_extractor):
     # Prepare the image for the model
     inputs = feature_extractor(images=image, return_tensors="pt")
     with torch.no_grad():
-        enhanced_image = model(**inputs).logits
+        enhanced_image = model(**inputs).pixel_values
     enhanced_image = np.clip(enhanced_image[0].numpy() * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(enhanced_image)
 
@@ -55,8 +55,8 @@ if model and feature_extractor and uploaded_files:
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
 
-        # Enhance the image using SwinIR
-        enhanced_image = enhance_image_with_swinir(image, model, feature_extractor)
+        # Enhance the image using Swin2SR
+        enhanced_image = enhance_image_with_swin2sr(image, model, feature_extractor)
 
         # Save enhanced images to the temporary directory
         enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
