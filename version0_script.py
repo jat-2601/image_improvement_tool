@@ -2,13 +2,13 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import torch
-from transformers import AutoModelForImageSuperResolution, AutoFeatureExtractor
+from diffusers import StableDiffusionUpscalePipeline
 import zipfile
 import os
 from huggingface_hub import login
 
 # Streamlit app layout
-st.title("Image Enhancement Dashboard with MSRN")
+st.title("Image Enhancement Dashboard with Stable Diffusion")
 st.write("Upload low-resolution images to enhance their quality!")
 
 # Input for Hugging Face token
@@ -22,41 +22,37 @@ if hf_token:
     except Exception as e:
         st.error(f"Error logging in: {e}")
 
-# Load the MSRN model and feature extractor directly from Hugging Face
+# Load the Stable Diffusion Upscale model
 def load_model():
     try:
-        model = AutoModelForImageSuperResolution.from_pretrained("eugenesiow/msrn")
-        feature_extractor = AutoFeatureExtractor.from_pretrained("eugenesiow/msrn")
-        return model, feature_extractor
+        model = StableDiffusionUpscalePipeline.from_pretrained("CompVis/stable-diffusion-2-1", torch_dtype=torch.float16)
+        return model
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        return None, None
+        return None
 
-# Enhance image using MSRN
-def enhance_image_with_msrn(image, model, feature_extractor):
+# Enhance image using Stable Diffusion
+def enhance_image_with_stable_diffusion(image, model):
     # Prepare the image for the model
-    inputs = feature_extractor(images=image, return_tensors="pt")
-    with torch.no_grad():
-        enhanced_image = model(**inputs).pixel_values
-    enhanced_image = np.clip(enhanced_image[0].numpy() * 255, 0, 255).astype(np.uint8)
-    return Image.fromarray(enhanced_image)
+    enhanced_image = model(image).images[0]
+    return enhanced_image
 
 # Load the model
-model, feature_extractor = load_model()
+model = load_model()
 
 # File uploader for multiple images
 uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
 # Processing images
-if model and feature_extractor and uploaded_files:
+if model and uploaded_files:
     temp_dir = "temp_images"
     os.makedirs(temp_dir, exist_ok=True)
 
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
 
-        # Enhance the image using MSRN
-        enhanced_image = enhance_image_with_msrn(image, model, feature_extractor)
+        # Enhance the image using Stable Diffusion
+        enhanced_image = enhance_image_with_stable_diffusion(image, model)
 
         # Save enhanced images to the temporary directory
         enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
