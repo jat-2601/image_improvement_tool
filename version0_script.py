@@ -7,12 +7,20 @@ import zipfile
 import os
 from huggingface_hub import login
 
-# Authenticate with Hugging Face using the token from environment variable
-token = os.getenv("HUGGINGFACE_TOKEN")
-if token:
-    login(token=token)
-else:
-    st.error("Hugging Face token not found. Please set the HUGGINGFACE_TOKEN environment variable.")
+# Streamlit app layout
+st.title("Image Enhancement Dashboard with SwinIR")
+st.write("Upload low-resolution images to enhance their quality!")
+
+# Input for Hugging Face token
+hf_token = st.text_input("Enter your Hugging Face token:", type="password")
+
+# Authenticate with Hugging Face using the entered token
+if hf_token:
+    try:
+        login(token=hf_token)
+        st.success("Successfully logged in to Hugging Face!")
+    except Exception as e:
+        st.error(f"Error logging in: {e}")
 
 # Load the SwinIR model and feature extractor directly from Hugging Face
 def load_model():
@@ -32,10 +40,6 @@ def enhance_image_with_swinir(image, model, feature_extractor):
         enhanced_image = model(**inputs).logits
     enhanced_image = np.clip(enhanced_image[0].numpy() * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(enhanced_image)
-
-# Streamlit app layout
-st.title("Image Enhancement Dashboard with SwinIR")
-st.write("Upload low-resolution images to enhance their quality!")
 
 # Load the model
 model, feature_extractor = load_model()
