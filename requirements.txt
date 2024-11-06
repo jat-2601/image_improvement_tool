@@ -2,5 +2,5 @@ streamlit==1.20.0  # Streamlit for building the web app
 numpy==1.23.5      # NumPy for numerical operations
 Pillow==9.3.0      # Pillow for image processing
 tensorflow==2.12.0 # TensorFlow for model handling
-transformers==4.46.1 # Hugging Face Transformers for model loading
 torch==1.13.0      # PyTorch for model inference (if needed)
+transformers==4.45.1
