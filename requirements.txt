@@ -1,8 +1,8 @@
-streamlit==1.20.0  # Streamlit for building the web app
-numpy==1.23.5      # NumPy for numerical operations
-Pillow==9.3.0      # Pillow for image processing
-tensorflow==2.12.0 # TensorFlow for model handling
-torch==1.13.0      # PyTorch for model inference (if needed)
-transformers==4.46.2
-diffusers==0.31.0
-setuptools==75.3.0
+streamlit==1.20.0
+numpy==1.23.5
+torch==1.13.0
+torchvision==0.14.0
+diffusers==0.3.0
+Pillow==9.3.0
+super-image==0.1.0  # If using MSRN model
+setuptools==65.5.0  # Specify the version you need
