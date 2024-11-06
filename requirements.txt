@@ -6,4 +6,4 @@ diffusers==0.3.0
 Pillow==9.3.0
 super-image==0.1.0  # If using MSRN model
 
-setuptools==52.0.0
+setuptools==75.2.0
