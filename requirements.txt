@@ -5,3 +5,4 @@ tensorflow==2.12.0 # TensorFlow for model handling
 torch==1.13.0      # PyTorch for model inference (if needed)
 transformers==4.46.2
 diffusers==0.31.0
+setuptools==75.3.0
