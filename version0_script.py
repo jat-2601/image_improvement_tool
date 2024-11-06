@@ -1,15 +1,15 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import tensorflow as tf
-from transformers import AutoModelForImageSuperResolution, AutoFeatureExtractor
+import torch
+from transformers import SwinForImageClassification, AutoFeatureExtractor
 import zipfile
 import os
 
 # Load the SwinIR model and feature extractor directly from Hugging Face
 def load_model():
     try:
-        model = AutoModelForImageSuperResolution.from_pretrained("jayyap/swinir")
+        model = SwinForImageClassification.from_pretrained("jayyap/swinir")
         feature_extractor = AutoFeatureExtractor.from_pretrained("jayyap/swinir")
         return model, feature_extractor
     except Exception as e:
@@ -21,7 +21,7 @@ def enhance_image_with_swinir(image, model, feature_extractor):
     # Prepare the image for the model
     inputs = feature_extractor(images=image, return_tensors="pt")
     with torch.no_grad():
-        enhanced_image = model(**inputs).pixel_values
+        enhanced_image = model(**inputs).logits
     enhanced_image = np.clip(enhanced_image[0].numpy() * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(enhanced_image)
 
