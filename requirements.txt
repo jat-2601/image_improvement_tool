@@ -5,4 +5,4 @@ torchvision==0.14.0
 diffusers==0.3.0
 Pillow==9.3.0
 super-image==0.1.0  # If using MSRN model
-setuptools==65.5.0  # Specify the version you need
+distutils==3.10.14
