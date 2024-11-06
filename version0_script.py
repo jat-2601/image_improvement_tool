@@ -4,109 +4,91 @@ from PIL import Image
 import tensorflow as tf
 import zipfile
 import os
-from huggingface_hub import hf_hub_download
-import streamlit_authenticator as stauth
+from huggingface_hub import hf_hub_download, login
 
-# User authentication setup
-names = ['User1']  # Add user names
-usernames = ['user1']  # Add usernames
-passwords = ['password']  # Add passwords (in a real app, use hashed passwords)
+# Hugging Face login using the token
+login(token="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")
 
-# Create an authenticator object
-hashed_passwords = stauth.Hasher(passwords).generate()  # Hash the passwords
-authenticator = stauth.Authenticate(names, usernames, hashed_passwords, 'my_app', 'abcdef', cookie_expiry_days=30)
+# Function to download the SwinIR model from Hugging Face
+def download_model():
+    model_repo = "jayyap/swinir"  # Update this to the correct model repo if needed
+    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
+    try:
+        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
+        return model_path
+    except Exception as e:
+        st.error(f"Error downloading model: {e}")
+        return None
 
-# Login
-name, authentication_status = authenticator.login('Login', 'main')
+# Load the SwinIR model
+def load_swinir_model(model_path):
+    try:
+        model = tf.keras.models.load_model(model_path)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
-if authentication_status:
-    st.success(f'Welcome {name}!')
+# Enhance image using SwinIR
+def enhance_image_with_swinir(image, model):
+    image = image.resize((image.width // 4, image.height // 4))  # Resize for SwinIR input
+    image_array = np.array(image) / 255.0  # Normalize to [0, 1]
+    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+    enhanced_image = model.predict(image_array)
+    enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
+    return Image.fromarray(enhanced_image)
 
-    # Function to download the SwinIR model from Hugging Face
-    def download_model():
-        model_repo = "jayyap/swinir"  # Update this to the correct model repo if needed
-        model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
-        try:
-            model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-            return model_path
-        except Exception as e:
-            st.error(f"Error downloading model: {e}")
-            return None
+# Streamlit app layout
+st.title("Image Enhancement Dashboard with SwinIR")
+st.write("Upload low-resolution images to enhance their quality!")
 
-    # Load the SwinIR model
-    def load_swinir_model(model_path):
-        try:
-            model = tf.keras.models.load_model(model_path)
-            return model
-        except Exception as e:
-            st.error(f"Error loading model: {e}")
-            return None
+# Download and load the model
+model_path = download_model()
+model = load_swinir_model(model_path)
 
-    # Enhance image using SwinIR
-    def enhance_image_with_swinir(image, model):
-        image = image.resize((image.width // 4, image.height // 4))  # Resize for SwinIR input
-        image_array = np.array(image) / 255.0  # Normalize to [0, 1]
-        image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
-        enhanced_image = model.predict(image_array)
-        enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
-        return Image.fromarray(enhanced_image)
+# File uploader for multiple images
+uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
-    # Streamlit app layout
-    st.title("Image Enhancement Dashboard with SwinIR")
-    st.write("Upload low-resolution images to enhance their quality!")
+# Processing images
+if model and uploaded_files:
+    temp_dir = "temp_images"
+    os.makedirs(temp_dir, exist_ok=True)
 
-    # Download and load the model
-    model_path = download_model()
-    model = load_swinir_model(model_path)
+    for uploaded_file in uploaded_files:
+        image = Image.open(uploaded_file)
 
-    # File uploader for multiple images
-    uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        # Enhance the image using SwinIR
+        enhanced_image = enhance_image_with_swinir(image, model)
 
-    # Processing images
-    if model and uploaded_files:
-        temp_dir = "temp_images"
-        os.makedirs(temp_dir, exist_ok=True)
+        # Save enhanced images to the temporary directory
+        enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
+        enhanced_image.save(enhanced_image_path)
 
-        for uploaded_file in uploaded_files:
-            image = Image.open(uploaded_file)
+        # Display original and enhanced images
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(image.resize((500, 750)), caption="Original Image", use_column_width=True)
+        with col2:
+            st.image(enhanced_image.resize((500, 750)), caption="Enhanced Image", use_column_width=True)
 
-            # Enhance the image using SwinIR
-            enhanced_image = enhance_image_with_swinir(image, model)
-
-            # Save enhanced images to the temporary directory
-            enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
-            enhanced_image.save(enhanced_image_path)
-
-            # Display original and enhanced images
-            col1, col2 = st.columns(2)
-            with col1:
-                st.image(image.resize((500, 750)), caption="Original Image", use_column_width=True)
-            with col2:
-                st.image(enhanced_image.resize((500, 750)), caption="Enhanced Image", use_column_width=True)
-
-        # Create a ZIP file containing all enhanced images
-        zip_filename = "enhanced_images.zip"
-        with zipfile.ZipFile(zip_filename, 'w') as zipf:
-            for file in os.listdir(temp_dir):
-                zipf.write(os.path.join(temp_dir, file), file)
-
-        # Download button for the ZIP file
-        with open(zip_filename, 'rb') as f:
-            st.download_button(
-                label="Download All Enhanced Images as ZIP",
-                data=f,
-                file_name=zip_filename,
-                mime="application/zip"
-            )
-
-        # Clean up the temporary directory
+    # Create a ZIP file containing all enhanced images
+    zip_filename = "enhanced_images.zip"
+    with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for file in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, file))
-        os.rmdir(temp_dir)
+            zipf.write(os.path.join(temp_dir, file), file)
 
-        st.success("Enhancement Complete!")
-else:
-    if authentication_status is False:
-        st.error('Username/password is incorrect')
-    elif authentication_status is None:
-        st.warning('Please enter your username and password')
+    # Download button for the ZIP file
+    with open(zip_filename, 'rb') as f:
+        st.download_button(
+            label="Download All Enhanced Images as ZIP",
+            data=f,
+            file_name=zip_filename,
+            mime="application/zip"
+        )
+
+    # Clean up the temporary directory
+    for file in os.listdir(temp_dir):
+        os.remove(os.path.join(temp_dir, file))
+    os.rmdir(temp_dir)
+
+    st.success("Enhancement Complete!")
