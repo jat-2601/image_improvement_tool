@@ -2,56 +2,41 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import tensorflow as tf
+from transformers import AutoModelForImageSuperResolution, AutoFeatureExtractor
 import zipfile
 import os
-from huggingface_hub import hf_hub_download
 
-# Set your Hugging Face token as an environment variable
-# You can do this in your terminal or set it in your environment
-# For example, in a terminal: export HUGGINGFACE_TOKEN="your_token_here"
-
-# Function to download the SwinIR model from Hugging Face
-def download_model():
-    model_repo = "jayyap/swinir"  # Update this to the correct model repo if needed
-    model_filename = "swinir_model.h5"  # Ensure this is the correct model filename
+# Load the SwinIR model and feature extractor directly from Hugging Face
+def load_model():
     try:
-        model_path = hf_hub_download(repo_id=model_repo, filename=model_filename)
-        return model_path
-    except Exception as e:
-        st.error(f"Error downloading model: {e}")
-        return None
-
-# Load the SwinIR model
-def load_swinir_model(model_path):
-    try:
-        model = tf.keras.models.load_model(model_path)
-        return model
+        model = AutoModelForImageSuperResolution.from_pretrained("jayyap/swinir")
+        feature_extractor = AutoFeatureExtractor.from_pretrained("jayyap/swinir")
+        return model, feature_extractor
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        return None
+        return None, None
 
 # Enhance image using SwinIR
-def enhance_image_with_swinir(image, model):
-    image = image.resize((image.width // 4, image.height // 4))  # Resize for SwinIR input
-    image_array = np.array(image) / 255.0  # Normalize to [0, 1]
-    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
-    enhanced_image = model.predict(image_array)
-    enhanced_image = np.clip(enhanced_image[0] * 255, 0, 255).astype(np.uint8)
+def enhance_image_with_swinir(image, model, feature_extractor):
+    # Prepare the image for the model
+    inputs = feature_extractor(images=image, return_tensors="pt")
+    with torch.no_grad():
+        enhanced_image = model(**inputs).pixel_values
+    enhanced_image = np.clip(enhanced_image[0].numpy() * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(enhanced_image)
 
 # Streamlit app layout
 st.title("Image Enhancement Dashboard with SwinIR")
 st.write("Upload low-resolution images to enhance their quality!")
 
-# Download and load the model
-model_path = download_model()
-model = load_swinir_model(model_path)
+# Load the model
+model, feature_extractor = load_model()
 
 # File uploader for multiple images
 uploaded_files = st.file_uploader("Choose one or more images...", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
 
 # Processing images
-if model and uploaded_files:
+if model and feature_extractor and uploaded_files:
     temp_dir = "temp_images"
     os.makedirs(temp_dir, exist_ok=True)
 
@@ -59,7 +44,7 @@ if model and uploaded_files:
         image = Image.open(uploaded_file)
 
         # Enhance the image using SwinIR
-        enhanced_image = enhance_image_with_swinir(image, model)
+        enhanced_image = enhance_image_with_swinir(image, model, feature_extractor)
 
         # Save enhanced images to the temporary directory
         enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
