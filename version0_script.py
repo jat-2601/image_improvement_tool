@@ -4,10 +4,11 @@ from PIL import Image
 import tensorflow as tf
 import zipfile
 import os
-from huggingface_hub import hf_hub_download, login
+from huggingface_hub import hf_hub_download
 
-# Hugging Face login using the token
-login(token="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")
+# Set your Hugging Face token as an environment variable
+# You can do this in your terminal or set it in your environment
+# For example, in a terminal: export HUGGINGFACE_TOKEN="your_token_here"
 
 # Function to download the SwinIR model from Hugging Face
 def download_model():
