@@ -5,6 +5,14 @@ import torch
 from transformers import SwinForImageClassification, AutoFeatureExtractor
 import zipfile
 import os
+from huggingface_hub import login
+
+# Authenticate with Hugging Face using the token from environment variable
+token = os.getenv("HUGGINGFACE_TOKEN")
+if token:
+    login(token=token)
+else:
+    st.error("Hugging Face token not found. Please set the HUGGINGFACE_TOKEN environment variable.")
 
 # Load the SwinIR model and feature extractor directly from Hugging Face
 def load_model():
