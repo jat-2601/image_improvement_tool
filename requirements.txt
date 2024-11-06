@@ -4,3 +4,4 @@ Pillow==9.3.0
 tensorflow==2.11.0
 huggingface_hub==0.10.1
 streamlit-authenticator==0.1.0
+transformers==4.46.1
