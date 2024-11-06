@@ -2,13 +2,13 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import torch
-from transformers import Swin2SRForImageSuperResolution, AutoImageProcessor
+from transformers import AutoModelForImageSuperResolution, AutoFeatureExtractor
 import zipfile
 import os
 from huggingface_hub import login
 
 # Streamlit app layout
-st.title("Image Enhancement Dashboard with Swin2SR")
+st.title("Image Enhancement Dashboard with MSRN")
 st.write("Upload low-resolution images to enhance their quality!")
 
 # Input for Hugging Face token
@@ -22,18 +22,18 @@ if hf_token:
     except Exception as e:
         st.error(f"Error logging in: {e}")
 
-# Load the Swin2SR model and feature extractor directly from Hugging Face
+# Load the MSRN model and feature extractor directly from Hugging Face
 def load_model():
     try:
-        model = Swin2SRForImageSuperResolution.from_pretrained("jayyap/swin2sr")
-        feature_extractor = AutoImageProcessor.from_pretrained("jayyap/swin2sr")
+        model = AutoModelForImageSuperResolution.from_pretrained("eugenesiow/msrn")
+        feature_extractor = AutoFeatureExtractor.from_pretrained("eugenesiow/msrn")
         return model, feature_extractor
     except Exception as e:
         st.error(f"Error loading model: {e}")
         return None, None
 
-# Enhance image using Swin2SR
-def enhance_image_with_swin2sr(image, model, feature_extractor):
+# Enhance image using MSRN
+def enhance_image_with_msrn(image, model, feature_extractor):
     # Prepare the image for the model
     inputs = feature_extractor(images=image, return_tensors="pt")
     with torch.no_grad():
@@ -55,8 +55,8 @@ if model and feature_extractor and uploaded_files:
     for uploaded_file in uploaded_files:
         image = Image.open(uploaded_file)
 
-        # Enhance the image using Swin2SR
-        enhanced_image = enhance_image_with_swin2sr(image, model, feature_extractor)
+        # Enhance the image using MSRN
+        enhanced_image = enhance_image_with_msrn(image, model, feature_extractor)
 
         # Save enhanced images to the temporary directory
         enhanced_image_path = os.path.join(temp_dir, f"enhanced_{os.path.splitext(uploaded_file.name)[0]}.png")
